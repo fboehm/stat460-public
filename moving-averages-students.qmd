@@ -1,0 +1,157 @@
+---
+title: "Moving averages in R"
+format:
+  html:
+    embed-resources: true
+---
+
+
+```{r}
+# setup
+install.packages("slider")
+library(fpp3)
+```
+
+
+## Defining Moving average
+
+A moving average of order $m$, with $m = 2k + 1$, is defined as: 
+$$\hat T_t = \frac{1}{m} \sum_{j = -k}^{k} y_{t + j}$$
+
+Where:
+
+- $\hat T_t$ is the estimated moving average at time $t$.
+- $m$ is the order of the moving average. 
+- $y_{t + j}$ is the value of the time series at time $t + j$.
+- $k$ is the number of observations to average on either side of time $t$.
+
+
+```{r}
+# from fpp3 text
+global_economy |>
+  filter(Country == "Australia") |>
+  autoplot(Exports) +
+  labs(y = "% of GDP", title = "Total Australian exports")
+```
+
+
+
+
+
+### Add moving average to plot
+
+```{r}
+aus_exports <- global_economy |>
+  filter(Country == "Australia") |>
+  mutate(
+    `5-MA` = slider::slide_dbl(Exports, mean,
+                .before = 2, .after = 2, .complete = TRUE)
+  )
+```
+
+```{r}
+# examine the data frame
+aus_exports
+```
+
+```{r}
+aus_exports |>
+  autoplot(Exports) +
+  geom_line(aes(y = `5-MA`), colour = "#D55E00") +
+  labs(y = "% of GDP",
+       title = "Total Australian exports")
+```
+
+## Question
+
+Write, in terms of the original observations, the order 5 moving average at time point 3.
+
+
+
+
+
+
+## Moving average of moving averages
+
+- **Why?** Might want to work with *even* order moving averages, but need to make them symmetric    
+- eg., Estimating the trend-cycle from seasonal data  
+
+
+```{r}
+beer <- aus_production |>
+  filter(year(Quarter) >= 1992) |>
+  select(Quarter, Beer)
+beer_ma <- beer |>
+  mutate(
+    `4-MA` = slider::slide_dbl(Beer, mean,
+                .before = 1, .after = 2, .complete = TRUE),
+    `2x4-MA` = slider::slide_dbl(`4-MA`, mean,
+                .before = 1, .after = 0, .complete = TRUE)
+  )
+```
+
+
+```{r}
+# look at the resulting data frame 
+beer_ma
+```
+
+## Questions
+
+
+Question: 
+
+Write, in terms of the original observations, the order 5 moving average at time point 3.
+
+
+
+Question: 
+
+Write, in terms of the original observations, the order 2 moving average of the order 4 moving average at time point 3.
+
+
+
+
+
+## Estimating the trend-cycle from seasonal data
+
+
+```{r}
+us_retail_employment <- us_employment |>
+  filter(year(Month) >= 1990, Title == "Retail Trade") |>
+  select(-Series_ID)
+us_retail_employment_ma <- us_retail_employment |>
+  mutate(
+    `12-MA` = slider::slide_dbl(Employed, mean,
+                .before = 5, .after = 6, .complete = TRUE),
+    `2x12-MA` = slider::slide_dbl(`12-MA`, mean,
+                .before = 1, .after = 0, .complete = TRUE)
+  )
+```
+
+```{r}
+# look at the us_retail_employment_ma
+us_retail_employment_ma
+```
+
+
+```{r}
+# plot without moving averages
+us_retail_employment_ma |>
+  autoplot(Employed, colour = "gray") +
+  labs(y = "Persons (thousands)",
+       title = "Total employment in US retail")
+```
+
+
+
+```{r}
+# plot with moving averages
+us_retail_employment_ma |>
+  autoplot(Employed, colour = "gray") +
+  geom_line(aes(y = `2x12-MA`), colour = "#D55E00") +
+  labs(y = "Persons (thousands)",
+       title = "Total employment in US retail")
+```
+
+
